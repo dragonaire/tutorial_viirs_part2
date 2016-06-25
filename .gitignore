@@ -1,0 +1,4 @@
+**/*.pyc
+*.egg-info
+*.tar.gz
+*.swp

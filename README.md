@@ -9,7 +9,7 @@ https://docs.google.com/document/d/1f9YrGHhNkstJyN5mgjLaYcULEvsaLpOD5M-yHJZhIqA/
 
 ##
 
-1. Download the data.
+1. Download the VIIRS data.
 
    Try
    ```
@@ -19,5 +19,15 @@ https://docs.google.com/document/d/1f9YrGHhNkstJyN5mgjLaYcULEvsaLpOD5M-yHJZhIqA/
 
    As an example, to download only February data in North America:
    ```
-   python scripts/download_viirs_data.py --months=2 --tiles=75N180W --outfolder=viirs_data --live
+   python scripts/download_viirs_data.py --months=2 --tiles=75N180W --outfolder=data/viirs --live
    ```
+
+1. Working with GeoJSON data
+
+   You can find GeoJSON data for the United states [here](http://eric.clst.org/Stuff/USGeoJSON)
+
+   For example, to download county-level data at medium resolution:
+   ```
+   curl http://eric.clst.org/wupl/Stuff/gz_2010_us_050_00_5m.json -o data/us_counties_5m.json
+   ```
+

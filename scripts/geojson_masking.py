@@ -1,46 +1,57 @@
-import os
-import sh
-import json
+from affine import Affine
 import rasterio
 import shapely.geometry
-from affine import Affine
-import pandas as pd
-
-import conf
+import numpy as np
 
 
-# TODO: this should be scripted to download a file directly to sample_data,
-# rather than assuming user has this tif in their local path
-#RASTER_FILE = os.path.join(
-#    os.path.expanduser('~'), 'bh', 'data', 'satellite',
-#    'SVDNB_npp_20140201-20140228_75N180W_vcmcfg_'
-#    'v10_c201507201052.avg_rade9.tif'
-#)
-
-COUNTIES_GEOJSON_FILE = os.path.join(conf.data_path, 'us_counties_5m.json')
-STATE_CODES_FILE = os.path.join(conf.data_path, 'state_codes.txt')
-
-states_df = pd.read_csv(STATE_CODES_FILE, sep='|').set_index('STATE')
-states = states_df['STATE_NAME']
-
-with open(COUNTIES_GEOJSON_FILE, 'r') as f:
-    counties_raw_geojson = json.load(f, 'latin-1')
-
-def get_county_name_from_geo_obj(geo_obj):
+def load_raster_with_mask(raster_file, geojson_geometry):
     """
-    Use the NAME and STATE properties of a county's geojson
-    object to get a name "state: county" for that county.
+    Given a rasterio file and a geojson geometry, return a
+    numpy masked array of pixel values for coordinates within
+    that geometry.
+
+    Typically the geojson geometry is under the 'geometry' key of
+    a geojson feature.
+
+    You can recover the pixel values for the entire bounding box by
+    accessing the `data` field of the masked array, or the mask
+    itself by accessing the `mask` field.
+
     """
-    return u'{state}: {county}'.format(
-        state=states[int(geo_obj['properties']['STATE'])],
-        county=geo_obj['properties']['NAME']
+    # get the bounding box, as latitude and longitude
+    geo_shape = shapely.geometry.shape(geojson_geometry)
+    lon_min, lat_min, lon_max, lat_max = geo_shape.bounds
+    # get the bounding box as indices of the raster file
+    # (note that the order of coordinates gets flipped here,
+    #  the first index is for latitude, the second for longitude)
+    bottom, left = raster_file.index(lon_min, lat_min)
+    top, right = raster_file.index(lon_max, lat_max)
+    raster_window = ((top, bottom+1), (left, right+1))
+    # load the raw pixel data for the bounding box as a 2d array
+    bounding_box_array = raster_file.read(indexes=1, window=raster_window)
+    # create an updated affine mapping. Slicing into the bounding box
+    # did not change the scaling or rotation of pixels, but the offset
+    # changed.
+    rfa = raster_file.affine
+    bounding_box_affine = Affine(
+        rfa.a, rfa.b, lon_min,
+        rfa.d, rfa.e, lat_max
     )
-
-counties_geojson = {
-    get_county_name_from_geo_obj(county_geojson): county_geojson
-    for county_geojson in counties_raw_geojson['features']
-}
-
-print len(counties_geojson)
-print sorted(counties_geojson.keys())[:10]
-
+    # now that we know the affine mapping, we can use rasterio.rasterize
+    # to find which pixels fall inside the geojson geometry. In the first
+    # argument, we are saying we want 0 wherever we fall inside the geo
+    # shape, and the `fill` argument is specifying that we get 1 outside.
+    # This is because numpy uses this convention for masked data.
+    inclusion_mask = rasterio.features.rasterize(
+        shapes=[(geo_shape, 0)],
+        out_shape=bounding_box_array.shape,
+        transform=bounding_box_affine,
+        fill=1,
+        dtype=np.uint8,  # this is the smallest available dtype
+    )
+    # create the masked array
+    masked_data = np.ma.array(
+        data=bounding_box_array,
+        mask=inclusion_mask,
+    )
+    return masked_data

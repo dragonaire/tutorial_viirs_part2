@@ -1,15 +1,15 @@
 """
 This script scrapes the NOAA website to download viirs data
 """
-
 import argparse
 from argparse import RawTextHelpFormatter
+
 from bs4 import BeautifulSoup
-import os
 import requests
 import sh
 
 BASE_URL = 'http://mapserver.ngdc.noaa.gov/viirs_data/viirs_composite/v10'
+
 
 # list a directory on the website
 def list_path(path):
@@ -27,6 +27,7 @@ def list_path(path):
             result.append(href)
     return result
 
+
 def get_time_periods():
     return [
         x[:-1] for x in
@@ -34,15 +35,18 @@ def get_time_periods():
         if x.endswith('/')
     ]
 
+
 def parse_time_period(time_period):
     year = int(time_period[:4])
     month = int(time_period[4:])
     return (year, month)
 
+
 def parse_tile_filename(tile_file):
     parts = tile_file.split('_')
     tile = parts[3]
     return tile
+
 
 def get_tile_files(time_period):
     # paths = list_path('/%s' % time_period)
@@ -51,17 +55,19 @@ def get_tile_files(time_period):
     # ignores the png files
     return [path for path in paths if path.endswith('.tgz')]
 
-def download_data(output_folder, tiles=None, years=None, months=None, live=True):
+
+def download_data(output_folder, tiles=None, years=None, months=None,
+                  live=True):
     for time_period in get_time_periods():
         (year, month) = parse_time_period(time_period)
         if not (months is None or month in months):
-            continue # not a month we care about
+            continue  # not a month we care about
         if not (years is None or year in years):
-            continue # not a year we care about
+            continue  # not a year we care about
         for tile_file in get_tile_files(time_period):
             tile = parse_tile_filename(tile_file)
             if not (tiles is None or tile in tiles):
-                continue # not a tile we care about
+                continue  # not a tile we care about
             url = '%s/%s/vcmcfg/%s' % (BASE_URL, time_period, tile_file)
             if live:
                 # 'Warning: files to be downloaded are large'

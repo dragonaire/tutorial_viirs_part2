@@ -9,25 +9,17 @@ https://docs.google.com/document/d/1f9YrGHhNkstJyN5mgjLaYcULEvsaLpOD5M-yHJZhIqA/
 
 ##
 
-1. Download the VIIRS data.
+1. Downloading data
 
-   Try
-   ```
-   python scripts/download_viirs_data.py -h
-   ```
-   to see how to use the script.
+   Before you can use VIIRS data do do anything interesting, you must [download the VIIRS data](download_data.md).
 
-   As an example, to download only February data in North America:
-   ```
-   python scripts/download_viirs_data.py --months=2 --tiles=75N180W --outfolder=data/viirs --live
-   ```
+1. Working with data
 
-1. Working with GeoJSON data
+   After downloading the data, you'll surely want to do something interesting with it.
+   We have written [a tutorial](geo_json.md) with examples of how to look at data for particular geographical regions.
 
-   You can find GeoJSON data for the United states [here](http://eric.clst.org/Stuff/USGeoJSON)
+1. Visualizing data
 
-   For example, to download county-level data at medium resolution:
-   ```
-   curl http://eric.clst.org/wupl/Stuff/gz_2010_us_050_00_5m.json -o data/us_counties_5m.json
-   ```
-
+   We also have an example of an [end-to-end website](https://github.com/bayeshack2016/sysj/tree/master/site)
+   that lets you visualize VIIRS data (and other county data) for different counties and time periods,
+   by imposing the data a map.

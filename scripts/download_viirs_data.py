@@ -139,8 +139,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     months = None if args.months is None else map(int, filter(len, args.months.split(',')))
-    years =  None if args.years  is None else map(int, filter(len, args.years.split(',') ))
-    tiles =  None if args.tiles  is None else filter(len, args.tiles.split(',') )
+    years =  None if args.years  is None else map(int, filter(len, args.years.split(',')))
+    tiles =  None if args.tiles  is None else filter(len, args.tiles.split(','))
 
     sh.mkdir('-p', args.outfolder)
     download_data(

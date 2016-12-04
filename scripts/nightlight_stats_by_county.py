@@ -17,6 +17,72 @@ counties_geojson_file = os.path.join(
 state_codes_file = os.path.join(
     sample_data_dir, 'state_codes.txt')
 
+def get_counties_geojson(counties_geojson_file, state_codes_file):
+    with open(counties_geojson_file, 'r') as f:
+        counties_raw_geojson = json.load(f, 'latin-1')
+
+    states_df = pd.read_csv(state_codes_file, sep='|').set_index('STATE')
+    states = states_df['STATE_NAME']
+
+    # rearrange the raw geojson so the keys are county names with states
+    counties_geojson = {
+        get_county_name_from_geo_obj(county_geojson): county_geojson
+        for county_geojson in counties_raw_geojson['features']
+    }
+    return counties_geojson
+
+def get_county_name_from_geo_obj(geo_obj):
+    """
+    Use the NAME and STATE properties of a county's geojson
+    object to get a name "state: county" for that county.
+    """
+    return u'{state}: {county}'.format(
+        state=states[int(geo_obj['properties']['STATE'])],
+        county=geo_obj['properties']['NAME']
+    )
+
+def masked_median(masked_data):
+    """
+    Get the median of a masked array. This function is needed because
+    np.ma.median returns differently shaped output depending on whether
+    any data is masked.
+
+    (This behavior is odd, and not clear at all from the docs)
+    """
+    np_ma_median = np.ma.median(masked_data)
+    if np_ma_median.data.shape == ():
+        return np.float(np_ma_median.data)
+    else:
+        return np_ma_median.data[0]
+
+def get_nightlights_stats(county_name, county_geojson, rasterio_file):
+    '''
+    Calculate the mean, median, and standard deviation
+    '''
+    masked_nightlights = load_raster_with_mask(
+        rasterio_file,
+        county_geojson['geometry']
+    )
+    # NOTE: np.ma.median returns a 1x1 masked array, so we get the
+    # actual median by indexing `data`
+    return {'county_name': county_name,
+            'mean': np.ma.mean(masked_nightlights),
+            'median': masked_median(masked_nightlights),
+            'std': np.ma.std(masked_nightlights),
+            }
+
+def get_stats(counties_geojson, raster_file, output_file):
+    rasterio_file = rasterio.open(raster_file, 'r')
+
+    county_satellite_data = [
+        get_nightlights_stats(county_name, county_geojson, rasterio_file)
+        for county_name, county_geojson in counties_geojson.iteritems()
+    ]
+
+    df = pd.DataFrame.from_records(county_satellite_data, index='county_name')
+    df.to_csv(output_file, encoding='utf-8')
+    return df
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description='''
@@ -40,64 +106,8 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    raster_file = rasterio.open(args.raster_file, 'r')
 
-    with open(counties_geojson_file, 'r') as f:
-        counties_raw_geojson = json.load(f, 'latin-1')
+    counties_geojson = get_counties_geojson(counties_geojson_file, state_codes_file):
+    df = get_stats(counties_geojson, args.raster_file, args.output_file)
+    print df.head()
 
-    states_df = pd.read_csv(state_codes_file, sep='|').set_index('STATE')
-    states = states_df['STATE_NAME']
-
-    def get_county_name_from_geo_obj(geo_obj):
-        """
-        Use the NAME and STATE properties of a county's geojson
-        object to get a name "state: county" for that county.
-        """
-        return u'{state}: {county}'.format(
-            state=states[int(geo_obj['properties']['STATE'])],
-            county=geo_obj['properties']['NAME']
-        )
-
-    # rearrange the raw geojson so the keys are county names with states
-    counties_geojson = {
-        get_county_name_from_geo_obj(county_geojson): county_geojson
-        for county_geojson in counties_raw_geojson['features']
-    }
-
-    def masked_median(masked_data):
-        """
-        Get the median of a masked array. This function is needed because
-        np.ma.median returns differently shaped output depending on whether
-        any data is masked.
-
-        (This behavior is odd, and not clear at all from the docs)
-        """
-        np_ma_median = np.ma.median(masked_data)
-        if np_ma_median.data.shape == ():
-            return np.float(np_ma_median.data)
-        else:
-            return np_ma_median.data[0]
-
-    def get_nightlights_stats(county_name, county_geojson, raster_file):
-        '''
-        Calculate the mean, median, and standard deviation
-        '''
-        masked_nightlights = load_raster_with_mask(
-            raster_file,
-            county_geojson['geometry']
-        )
-        # NOTE: np.ma.median returns a 1x1 masked array, so we get the
-        # actual median by indexing `data`
-        return {'county_name': county_name,
-                'mean': np.ma.mean(masked_nightlights),
-                'median': masked_median(masked_nightlights),
-                'std': np.ma.std(masked_nightlights),
-                }
-
-    county_satellite_data = [
-        get_nightlights_stats(county_name, county_geojson, raster_file)
-        for county_name, county_geojson in counties_geojson.iteritems()
-    ]
-
-    df = pd.DataFrame.from_records(county_satellite_data, index='county_name')
-    df.to_csv(args.output_file, encoding='utf-8')

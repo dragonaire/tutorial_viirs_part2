@@ -9,16 +9,16 @@ https://docs.google.com/document/d/1f9YrGHhNkstJyN5mgjLaYcULEvsaLpOD5M-yHJZhIqA/
 
 ##
 
-1. *Downloading data*
+1. **Downloading data**
 
    Before you can use VIIRS data do do anything interesting, you must [download the VIIRS data](download_data.md).
 
-1. *Working with data*
+1. **Working with data**
 
    After downloading the data, you'll surely want to do something interesting with it.
    We have written [a tutorial](geo_json.md) with examples of how to look at data for particular geographical regions.
 
-1. *Visualizing data*
+1. **Visualizing data**
 
    We also have an example of an [end-to-end website](https://github.com/bayeshack2016/sysj/tree/master/site)
    that lets you visualize VIIRS data (and other county data) for different counties and time periods,

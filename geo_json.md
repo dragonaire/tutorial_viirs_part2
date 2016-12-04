@@ -12,7 +12,7 @@ curl http://eric.clst.org/wupl/Stuff/gz_2010_us_050_00_5m.json -o data/us_counti
 
 ## Combining GeoJSON data with VIIRS data
 
-We've written a function [load_raster_with_mask](scripts/geojson_masking.md)
+We've written a function [load_raster_with_mask](scripts/geojson_masking.py)
 which takes a raster file and GeoJSON mask, and outputs the masked data.
 
 There's also a [short tutorial](nb/Geojson and Rasterio Demo.ipynb)
